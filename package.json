@@ -1,0 +1,22 @@
+{
+  "name": "homelert",
+  "version": "1.0.0",
+  "description": "Self-hosted homelab notification center",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@fastify/static": "^7.0.4",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^4.26.2",
+    "js-yaml": "^4.1.0",
+    "node-fetch": "^3.3.2",
+    "pino-pretty": "^11.0.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true
+  }
+}

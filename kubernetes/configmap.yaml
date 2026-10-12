@@ -1,0 +1,55 @@
+# Mounted at /config/rules.yaml — keep in sync with ../rules.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homelert-rules
+  namespace: homelert
+data:
+  rules.yaml: |
+    rules:
+      - name: "K8s crashloop"
+        condition: "source == 'kubernetes' AND restartCount > 3"
+        window: "10m"
+        severity: "critical"
+
+      - name: "High CPU"
+        condition: "source == 'proxmox' AND cpu > 80"
+        window: "5m"
+        severity: "warning"
+
+      - name: "Disk full"
+        condition: "source == 'proxmox' AND disk > 90"
+        severity: "critical"
+
+      - name: "Container restart loop"
+        condition: "source == 'docker' AND restartCount > 5"
+        window: "10m"
+        severity: "warning"
+
+      - name: "URL down"
+        condition: "source == 'uptime' AND status != 200"
+        window: "5m"
+        severity: "critical"
+
+      - name: "High RAM"
+        condition: "source == 'proxmox' AND ram > 90"
+        window: "5m"
+        severity: "warning"
+
+      - name: "OOMKilled pod"
+        condition: "source == 'kubernetes' AND reason == 'OOMKilled'"
+        window: "15m"
+        severity: "critical"
+
+      - name: "GitHub Actions failure"
+        condition: "source == 'github' AND severity == 'warning'"
+        severity: "warning"
+
+      # Deploy failures, rollbacks, failed post-deploy health checks and downtime from DeployGuard.
+      # DeployGuard already de-duplicates, so no window; severity comes from the event.
+      - name: "DeployGuard"
+        condition: "source == 'deployguard'"
+
+    silences:
+      - from: "02:00"
+        to: "06:00"

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homelert — Homelab Notification Center</title>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --bg2: #141414;
+      --bg3: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #e0e0e0;
+      --text2: #888;
+      --green: #00e676;
+      --red: #f44336;
+      --yellow: #ffb300;
+      --blue: #42a5f5;
+      --critical: #f44336;
+      --warning: #ffb300;
+      --info: #42a5f5;
+      --font: 'Courier New', 'Consolas', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: var(--green);
+    }
+
+    header .subtitle {
+      color: var(--text2);
+      font-size: 11px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot-yellow{ background: var(--yellow);box-shadow: 0 0 6px var(--yellow); }
+    .dot-gray  { background: var(--text2); }
+
+    nav {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 0;
+    }
+
+    nav button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 10px 20px;
+      text-transform: uppercase;
+    }
+
+    nav button:hover { color: var(--text); }
+    nav button.active { color: var(--green); border-bottom-color: var(--green); }
+
+    .container { padding: 20px 24px; }
+
+    section { display: none; }
+    section.active { display: block; }
+
+    h2 {
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 16px;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filters select, .filters input {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    .filters button {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--green);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 6px 14px;
+    }
+
+    .filters button:hover { background: var(--border); }
+
+    /* Alert feed */
+    .alert-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .alert-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      padding: 10px 14px;
+    }
+
+    .alert-item.critical { border-left-color: var(--critical); }
+    .alert-item.warning  { border-left-color: var(--yellow); }
+    .alert-item.info     { border-left-color: var(--blue); }
+
+    .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .severity-badge {
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      padding: 2px 6px;
+      text-transform: uppercase;
+    }
+
+    .severity-badge.critical { color: var(--critical); }
+    .severity-badge.warning  { color: var(--yellow); }
+    .severity-badge.info     { color: var(--blue); }
+
+    .alert-source {
+      color: var(--text2);
+      font-size: 11px;
+      background: var(--bg3);
+      padding: 1px 6px;
+    }
+
+    .alert-time { color: var(--text2); font-size: 11px; margin-left: auto; }
+
+    .alert-title { font-size: 13px; color: var(--text); }
+    .alert-body  { color: var(--text2); font-size: 11px; margin-top: 3px; }
+    .alert-rule  { color: var(--text2); font-size: 10px; margin-top: 4px; font-style: italic; }
+
+    /* Rules list */
+    .rules-grid { display: flex; flex-direction: column; gap: 6px; }
+
+    .rule-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 200px 1fr 80px 80px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .rule-name { color: var(--green); font-weight: bold; }
+    .rule-condition { color: var(--text2); font-size: 11px; word-break: break-all; }
+    .rule-window { color: var(--blue); font-size: 11px; }
+
+    /* Agent statuses */
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .agent-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 14px;
+    }
+
+    .agent-name {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .agent-detail { color: var(--text2); font-size: 11px; margin-bottom: 4px; }
+    .agent-last   { color: var(--text2); font-size: 10px; }
+
+    /* Silences */
+    .silence-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+
+    .silence-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .silence-time { color: var(--yellow); font-size: 13px; }
+    .silence-label { color: var(--text2); font-size: 11px; flex: 1; }
+
+    .btn-del {
+      background: none;
+      border: 1px solid var(--critical);
+      color: var(--critical);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+
+    .btn-del:hover { background: var(--critical); color: #fff; }
+
+    .silence-form {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .silence-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text2); }
+    .silence-form input {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 6px 10px;
+      width: 120px;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      border: none;
+      color: #000;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: bold;
+      padding: 7px 16px;
+      letter-spacing: 1px;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-value { font-size: 28px; font-weight: bold; color: var(--green); }
+    .stat-label { color: var(--text2); font-size: 11px; margin-top: 4px; }
+
+    .empty { color: var(--text2); font-size: 12px; padding: 20px 0; text-align: center; }
+
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--text2);
+      font-size: 11px;
+    }
+
+    .refresh-bar button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+
+    .refresh-bar button:hover { color: var(--green); border-color: var(--green); }
+
+    * { scrollbar-width: thin; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ HOMELERT</h1>
+  <span class="subtitle">Homelab Notification Center</span>
+  <span id="live-clock" style="margin-left:auto;color:var(--text2);font-size:11px;"></span>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('alerts', this)">Alerts</button>
+  <button onclick="switchTab('rules', this)">Rules</button>
+  <button onclick="switchTab('agents', this)">Agents</button>
+  <button onclick="switchTab('silences', this)">Silences</button>
+</nav>
+
+<div class="container">
+
+  <!-- ALERTS TAB -->
+  <section id="tab-alerts" class="active">
+    <h2>Alert History</h2>
+    <div class="filters">
+      <select id="filter-severity" onchange="loadAlerts()">
+        <option value="">All severities</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="info">Info</option>
+      </select>
+      <select id="filter-source" onchange="loadAlerts()">
+        <option value="">All sources</option>
+        <option value="github">GitHub</option>
+        <option value="docker">Docker</option>
+        <option value="kubernetes">Kubernetes</option>
+        <option value="uptime">Uptime</option>
+        <option value="proxmox">Proxmox</option>
+      </select>
+      <button onclick="loadAlerts()">↻ Refresh</button>
+    </div>
+    <div class="refresh-bar">
+      <span id="alerts-count">—</span>
+      <span>| Auto-refresh: 30s</span>
+    </div>
+    <div class="alert-list" id="alerts-list">
+      <div class="empty">Loading...</div>
+    </div>
+  </section>
+
+  <!-- RULES TAB -->
+  <section id="tab-rules">
+    <h2>Active Rules</h2>
+    <div class="rules-grid" id="rules-list">
+      <div class="empty">Loading...</div>
+    </div>
+  </section>
+
+  <!-- AGENTS TAB -->
+  <section id="tab-agents">
+    <h2>Polling Agent Status</h2>
+    <div class="refresh-bar">
+      <button onclick="loadAgents()">↻ Refresh</button>
+      <span id="agents-updated"></span>
+    </div>
+    <div class="agents-grid" id="agents-grid">
+      <div class="empty">Loading...</div>
+    </div>
+  </section>
+
+  <!-- SILENCES TAB -->
+  <section id="tab-silences">
+    <h2>Active Silences</h2>
+    <div class="silence-list" id="silences-list">
+      <div class="empty">Loading...</div>
+    </div>
+
+    <h2 style="margin-top:20px;">Add Silence Window</h2>
+    <div class="silence-form">
+      <label>From (HH:MM)<input type="time" id="si-from" /></label>
+      <label>To (HH:MM)<input type="time" id="si-to" /></label>
+      <label>Label (optional)<input type="text" id="si-label" placeholder="e.g. Maintenance" /></label>
+      <button class="btn-primary" onclick="addSilence()">+ Add Silence</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // ─── Tab navigation ────────────────────────────────────────────────────────
+  const tabLoaders = {
+    alerts: loadAlerts,
+    rules: loadRules,
+    agents: loadAgents,
+    silences: loadSilences
+  };
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    tabLoaders[name]?.();
+  }
+
+  // ─── Utilities ─────────────────────────────────────────────────────────────
+  function fmtTime(ts) {
+    return new Date(ts).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  }
+
+  function severityEmoji(s) {
+    return s === 'critical' ? '❌' : s === 'warning' ? '⚠️' : 'ℹ️';
+  }
+
+  function agentDot(status) {
+    if (status === 'ok') return 'dot-green';
+    if (status === 'error') return 'dot-red';
+    if (status === 'warning') return 'dot-yellow';
+    if (status === 'disabled') return 'dot-gray';
+    return 'dot-yellow';
+  }
+
+  async function apiFetch(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  // ─── Alerts ────────────────────────────────────────────────────────────────
+  async function loadAlerts() {
+    const severity = document.getElementById('filter-severity').value;
+    const source = document.getElementById('filter-source').value;
+    let url = '/api/alerts?limit=50';
+    if (severity) url += '&severity=' + encodeURIComponent(severity);
+    if (source) url += '&source=' + encodeURIComponent(source);
+
+    const list = document.getElementById('alerts-list');
+    try {
+      const alerts = await apiFetch(url);
+      document.getElementById('alerts-count').textContent = alerts.length + ' alert(s)';
+
+      if (alerts.length === 0) {
+        list.innerHTML = '<div class="empty">No alerts found.</div>';
+        return;
+      }
+
+      list.innerHTML = alerts.map(a => `
+        <div class="alert-item ${a.severity}">
+          <div class="alert-header">
+            <span class="severity-badge ${a.severity}">${severityEmoji(a.severity)} ${a.severity}</span>
+            <span class="alert-source">${escHtml(a.source)}</span>
+            <span class="alert-time">${fmtTime(a.timestamp)}</span>
+          </div>
+          <div class="alert-title">${escHtml(a.title)}</div>
+          ${a.body ? `<div class="alert-body">${escHtml(a.body)}</div>` : ''}
+          ${a.rule_name ? `<div class="alert-rule">rule: ${escHtml(a.rule_name)}</div>` : ''}
+        </div>
+      `).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="empty">Error: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  // ─── Rules ─────────────────────────────────────────────────────────────────
+  async function loadRules() {
+    const container = document.getElementById('rules-list');
+    try {
+      const rules = await apiFetch('/api/rules');
+      if (!rules.length) {
+        container.innerHTML = '<div class="empty">No rules loaded.</div>';
+        return;
+      }
+      container.innerHTML = rules.map(r => `
+        <div class="rule-item">
+          <div class="rule-name">${escHtml(r.name)}</div>
+          <div class="rule-condition">${escHtml(r.condition)}</div>
+          <div class="rule-window" title="Dedup window">${r.window || '—'}</div>
+          <span class="severity-badge ${r.severity}">${r.severity || 'info'}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = `<div class="empty">Error: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  // ─── Agents ────────────────────────────────────────────────────────────────
+  async function loadAgents() {
+    const grid = document.getElementById('agents-grid');
+    try {
+      const agents = await apiFetch('/api/agents');
+      document.getElementById('agents-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+      if (!agents.length) {
+        grid.innerHTML = '<div class="empty">No agents running.</div>';
+        return;
+      }
+
+      grid.innerHTML = agents.map(a => `
+        <div class="agent-card">
+          <div class="agent-name">
+            <span class="status-dot ${agentDot(a.status)}"></span>
+            ${escHtml(a.name)}
+          </div>
+          <div class="agent-detail">Status: ${escHtml(a.status)}</div>
+          ${a.detail ? `<div class="agent-detail">${escHtml(a.detail)}</div>` : ''}
+          <div class="agent-last">Last run: ${a.lastRun ? fmtTime(a.lastRun) : '—'}</div>
+        </div>
+      `).join('');
+    } catch (err) {
+      grid.innerHTML = `<div class="empty">Error: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  // ─── Silences ──────────────────────────────────────────────────────────────
+  async function loadSilences() {
+    const list = document.getElementById('silences-list');
+    try {
+      const silences = await apiFetch('/api/silences');
+      if (!silences.length) {
+        list.innerHTML = '<div class="empty">No active silences.</div>';
+        return;
+      }
+      list.innerHTML = silences.map(s => `
+        <div class="silence-item">
+          <span class="silence-time">${escHtml(s.from_time)} → ${escHtml(s.to_time)}</span>
+          <span class="silence-label">${escHtml(s.label || '')}</span>
+          <button class="btn-del" onclick="deleteSilence(${s.id})">✕ Remove</button>
+        </div>
+      `).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="empty">Error: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function addSilence() {
+    const from_time = document.getElementById('si-from').value;
+    const to_time = document.getElementById('si-to').value;
+    const label = document.getElementById('si-label').value.trim();
+
+    if (!from_time || !to_time) {
+      alert('Please set both from and to times.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/silences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from_time, to_time, label: label || undefined })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed');
+      }
+
+      document.getElementById('si-from').value = '';
+      document.getElementById('si-to').value = '';
+      document.getElementById('si-label').value = '';
+      loadSilences();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function deleteSilence(id) {
+    if (!confirm('Remove this silence?')) return;
+    try {
+      await fetch('/api/silences/' + id, { method: 'DELETE' });
+      loadSilences();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  // ─── XSS protection ────────────────────────────────────────────────────────
+  function escHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ─── Clock ─────────────────────────────────────────────────────────────────
+  function updateClock() {
+    document.getElementById('live-clock').textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ─── Auto-refresh ──────────────────────────────────────────────────────────
+  setInterval(() => {
+    const activeTab = document.querySelector('section.active');
+    if (activeTab?.id === 'tab-alerts') loadAlerts();
+    if (activeTab?.id === 'tab-agents') loadAgents();
+  }, 30000);
+
+  // ─── Initial load ──────────────────────────────────────────────────────────
+  loadAlerts();
+</script>
+</body>
+</html>

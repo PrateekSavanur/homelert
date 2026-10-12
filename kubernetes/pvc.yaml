@@ -1,0 +1,13 @@
+# SQLite database lives here (k3s built-in local-path provisioner)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: homelert-data
+  namespace: homelert
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

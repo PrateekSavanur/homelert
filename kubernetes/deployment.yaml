@@ -1,0 +1,76 @@
+# Secrets (Telegram / Proxmox) come from the homelert-secrets Secret,
+# created by Ansible (homelab repo: roles/homelert) — not tracked in git.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelert
+  namespace: homelert
+  labels:
+    app: homelert
+spec:
+  replicas: 1             # SQLite on a RWO volume — must stay at 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: homelert
+  template:
+    metadata:
+      labels:
+        app: homelert
+    spec:
+      serviceAccountName: homelert
+      containers:
+        - name: homelert
+          image: prateeksavanur/homelert:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DB_PATH
+              value: /data/homelert.db
+            - name: RULES_PATH
+              value: /config/rules.yaml
+            - name: POLL_INTERVAL_SECONDS
+              value: "60"
+            - name: UPTIME_URLS
+              value: "https://prateeksavanur.dev,http://jellyfin.homelab.svc.cluster.local:8096/health"
+            # Trust the cluster CA so the Kubernetes agent can reach the API server in-cluster
+            - name: NODE_EXTRA_CA_CERTS
+              value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          envFrom:
+            - secretRef:
+                name: homelert-secrets
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "96Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: rules
+              mountPath: /config
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: homelert-data
+        - name: rules
+          configMap:
+            name: homelert-rules

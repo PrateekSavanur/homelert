@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  homelert:
+    build: .
+    container_name: homelert
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - homelert-data:/data
+      - ./rules.yaml:/config/rules.yaml:ro
+      # Uncomment to enable Docker socket polling:
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Uncomment to enable Kubernetes polling:
+      # - ~/.kube/config:/config/kubeconfig:ro
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/homelert.db
+      - RULES_PATH=/config/rules.yaml
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - PROXMOX_HOST=${PROXMOX_HOST:-}
+      - PROXMOX_TOKEN=${PROXMOX_TOKEN:-}
+      - K8S_KUBECONFIG_PATH=${K8S_KUBECONFIG_PATH:-}
+      - DOCKER_SOCKET_PATH=${DOCKER_SOCKET_PATH:-/var/run/docker.sock}
+      - POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS:-60}
+      - UPTIME_URLS=${UPTIME_URLS:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  homelert-data:

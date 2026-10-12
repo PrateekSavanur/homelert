@@ -1,0 +1,28 @@
+# Lets the Kubernetes polling agent read Warning events across all namespaces
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homelert
+  namespace: homelert
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homelert-event-reader
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homelert-event-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homelert-event-reader
+subjects:
+  - kind: ServiceAccount
+    name: homelert
+    namespace: homelert
