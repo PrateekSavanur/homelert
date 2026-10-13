@@ -2,7 +2,6 @@
 # then pins that tag in kubernetes/deployment.yaml. ArgoCD sees the git
 # change and rolls out the new version.
 #
-# Required repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
 name: Build and Deploy
 
 on:
