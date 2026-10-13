@@ -1,7 +1,7 @@
 # Builds the image, pushes it to Docker Hub tagged with the commit SHA,
 # then pins that tag in kubernetes/deployment.yaml. ArgoCD sees the git
 # change and rolls out the new version.
-#
+# 
 name: Build and Deploy
 
 on:
