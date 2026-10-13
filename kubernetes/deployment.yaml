@@ -22,7 +22,7 @@ spec:
       serviceAccountName: homelert
       containers:
         - name: homelert
-          image: prateeksavanur/homelert:latest
+          image: prateeksavanur/homelert:7014c52d7dbef4af9be85e6affc4e43188f511c0
           ports:
             - containerPort: 3000
           env:
