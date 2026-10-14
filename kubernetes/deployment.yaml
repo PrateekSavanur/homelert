@@ -28,6 +28,9 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            # Silence windows in rules.yaml are evaluated in local time
+            - name: TZ
+              value: Asia/Kolkata
             - name: DB_PATH
               value: /data/homelert.db
             - name: RULES_PATH
