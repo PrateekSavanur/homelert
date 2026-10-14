@@ -212,6 +212,24 @@ function getUptimeUrls() {
   return raw.split(',').map(u => u.trim()).filter(Boolean);
 }
 
+// Last known state per URL (true = down), so a recovery can be reported once when a down URL
+// answers again. Seeded from the last stored uptime event so a restart mid-outage still
+// reports the recovery.
+const uptimeDown = new Map();
+
+function wasDown(url) {
+  if (!uptimeDown.has(url)) {
+    const last = db.prepare(`
+      SELECT raw_payload FROM events
+      WHERE source = 'uptime' AND json_extract(raw_payload, '$.url') = ?
+      ORDER BY timestamp DESC LIMIT 1
+    `).get(url);
+    const status = last ? JSON.parse(last.raw_payload).status : 200;
+    uptimeDown.set(url, status === 0 || status >= 400);
+  }
+  return uptimeDown.get(url);
+}
+
 async function runUptimeAgent() {
   const urls = getUptimeUrls();
 
@@ -245,15 +263,24 @@ async function runUptimeAgent() {
 
     checked++;
 
-    // Always ingest if non-200 or error
-    if (status === 0 || status >= 400) {
+    // Always ingest if non-200 or error; ingest a success only when it ends an outage
+    const down = status === 0 || status >= 400;
+    if (down) {
       ingestAgentEvent('uptime', {
         url,
         status,
         responseTime,
         error
       });
+    } else if (wasDown(url)) {
+      ingestAgentEvent('uptime', {
+        url,
+        status,
+        responseTime,
+        recovered: true
+      });
     }
+    uptimeDown.set(url, down);
   }));
 
   setStatus('uptime', errors > 0 ? 'warning' : 'ok', `Checked ${checked} URL(s), ${errors} error(s)`);

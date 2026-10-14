@@ -77,14 +77,17 @@ function normalizeUptime(id, timestamp, p) {
   const url = p.url || 'unknown';
   const status = parseInt(p.status || p.statusCode || '0', 10);
   const responseTime = p.responseTime || null;
-  const title = `Uptime: ${url} — ${status === 0 ? 'timeout/error' : status}`;
+  const down = status === 0 || status >= 400;
+  const title = p.recovered
+    ? `✅ Uptime recovered: ${url} — ${status}`
+    : `Uptime: ${url} — ${status === 0 ? 'timeout/error' : status}`;
   const body = `URL: ${url} | HTTP ${status}${responseTime ? ` | ${responseTime}ms` : ''}`;
-  const severity = (status === 0 || status >= 400) ? 'critical' : 'info';
+  const severity = down ? 'critical' : 'info';
 
   return {
     id, source: 'uptime', title, body, severity,
     timestamp,
-    metadata: { url, status, responseTime }
+    metadata: { url, status, responseTime, state: down ? 'down' : 'up' }
   };
 }
 

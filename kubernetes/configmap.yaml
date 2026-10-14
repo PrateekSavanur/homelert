@@ -27,9 +27,14 @@ data:
         severity: "warning"
 
       - name: "URL down"
-        condition: "source == 'uptime' AND status != 200"
+        condition: "source == 'uptime' AND state == 'down'"
         window: "5m"
         severity: "critical"
+
+      # Sent once when a URL that was down answers again (no window, one event per outage)
+      - name: "URL recovered"
+        condition: "source == 'uptime' AND state == 'up'"
+        severity: "info"
 
       - name: "High RAM"
         condition: "source == 'proxmox' AND ram > 90"
