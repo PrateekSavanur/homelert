@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: homelert.homelab.local
+    - host: homelert.home.prateeksavanur.dev
       http:
         paths:
           - path: /
