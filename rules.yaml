@@ -47,6 +47,10 @@ rules:
   - name: "DeployGuard"
     condition: "source == 'deployguard'"
 
+  # Failed Telegram → Jellyfin imports (also reported in the channel itself); severity from the event
+  - name: "Jellyfin import failed"
+    condition: "source == 'tg-jellyfin-sync'"
+
 silences:
   - from: "02:00"
     to: "06:00"
